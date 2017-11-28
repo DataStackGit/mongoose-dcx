@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<entry xmlns="http://www.w3.org/2005/Atom" xmlns:dcx="http://www.digicol.com/xmlns/dcx">
+	<document xmlns="http://www.digicol.com/xmlns/dcx" id="" version="1.0">
+		<!--pool_id id="architecture_story"/-->
+		<!--head>
+			<Status topic="docstatus-draft"></Status>
+			<Type topic="documenttype-story"></Type>
+		</head-->
+		<body xmlns="http://www.w3.org/1999/xhtml" xml:lang=""></body>
+	</document>
+</entry>

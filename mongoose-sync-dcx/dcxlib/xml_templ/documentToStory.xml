@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<entry xmlns="http://www.w3.org/2005/Atom" xmlns:dcx="http://www.digicol.com/xmlns/dcx">
+	<pubinfo xmlns="http://www.digicol.com/xmlns/dcx" id="" version="1.0">
+		<book></book>
+		<book_num></book_num>
+		<coordinates></coordinates>
+		<coordinates_rel></coordinates_rel>
+		<created>2015-03-13T12.40:32:00+03:00</created>
+		<date></date>
+		<doc_id id=""/>
+		<edition_id id=""/>
+		<ending_page></ending_page>
+		<ending_page_num></ending_page_num>
+		<file_variant>master</file_variant>
+		<identifier></identifier>
+		<info>
+			<storyobjectfields>
+				<title type="xhtml">
+					<p>Заголовок</p>
+				</title>
+			</storyobjectfields>
+			<template>
+				<slot>
+					<name>default</name>
+					<position>1</position>
+				</slot>
+			</template>
+		</info>
+		<kill_date></kill_date>
+		<number></number>
+		<number_num></number_num>
+		<page></page> <page_part></page_part>
+		<page_range></page_range>
+		<partpage></partpage>
+		<prod_path></prod_path>
+		<prod_sys_id id=""/>
+		<publication_id id=""/>
+		<remark></remark>
+		<revision></revision>
+		<section_id id=""/>
+		<special_issue_id id=""/>
+		<starting_page></starting_page>
+		<starting_page_num></starting_page_num>
+		<status_id id="pubstatus-planned_for_story" xml:lang=""></status_id>
+		<story_doc_id id=""/>
+		<subsection_id id=""/>
+		<title>Заголовок</title>
+		<type_id id="pubtype-image" xml:lang=""></type_id>
+		<uri></uri>
+		<volume></volume>
+		<volume_num></volume_num>
+		<web_channel_id id=""/>
+	</pubinfo>
+</entry>
