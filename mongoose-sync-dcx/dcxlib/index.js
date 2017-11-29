@@ -25,31 +25,44 @@ function _log() {
 		urlPrefix - префикс пути к API сервера default="/dcx_mkrf/atom"
 		pubInfoId - идентификатор статуса использования
 		uploadPathSuffix - путь к папке для загрузки бинарей
-		user
-		password
-		cookieStorageFileName
+		user - пользователь в DCX
+		password - пароль пользоваетля в DCX
+		cookieStorageFileName - путь к временному файлу для хранения полученных из DCX куков сессии
 */
 
 function dcxAPI(config) {
 	this.config=config;
 	this.config.urlPrefix = this.config.urlPrefix || "/dcx_mkrf/atom";
 	this.authData = {user: this.config.user, pass:this.config.password };
+	// пытаемся поднять с диска последнюю сессию. Если этого не сделать в DCX накапливаются сессии пользователей и жрут память
 	this._readCookie();
 	
 }
-
+// считывает с файла сохраненные ранее куки сессии
 dcxAPI.prototype._readCookie=function() {
 	if (this.config.cookieStorageFileName) 
 		try {
 			this.authData.cookie=fs.readJSONSync(this.config.cookieStorageFileName);
 		} catch(e) { }
 }
+// пишет сессию в файл
 dcxAPI.prototype._writeCookie=function() {
 	if (this.config.cookieStorageFileName && this.authData.cookie) 
 		try {
 			fs.writeJSONSync(this.config.cookieStorageFileName, this.authData.cookie, {encoding:"utf8"})
 		} catch(e) { }
 }
+
+// метод обращения в DCX. Строит и посылает XML запрос
+/* @param options {Object || String}
+ 	*default url: String - полный (с протоколом) или относительный к конфигу путь endpoint"а
+			method:String [POST] 
+			jar:Object - данные сессии 
+			headers - заголовки HTTP, *default {'Content-Type': 'application/atom+xml;type=entry' }
+			body: Object || Array || String - тушка запроса, если не строка - то автоматом строится XML (см. xml2js.buildObject)
+
+*/
+
 dcxAPI.prototype._api= function(options, callback) {
 	if (_.isString(options)) {
 		options={url:options};
@@ -94,6 +107,9 @@ dcxAPI.prototype._api= function(options, callback) {
 		callback(null, res, body);	
 	});
 };
+/*
+	Выковыривает данные из куков респонса и добавляет их в jar
+*/
 
 dcxAPI.prototype._getCookie = function(cookie) {
 	cookie = cookie || this.authData.cookie;
@@ -103,7 +119,9 @@ dcxAPI.prototype._getCookie = function(cookie) {
 	_log(LOG_INFO, "VMALIB:_getCookie: ", param)
 	return jar;
 }
-
+/*
+	Читает файл XML шаблона тела запроса из вложенной папки xml_templ, конвертирует в JOSON Object
+*/
 dcxAPI.prototype._parseXMLTpl = function(templ, callback) {
 	
 	_log(LOG_INFO, "Get File: ", __dirname + '/xml_templ/' + templ);
@@ -123,14 +141,24 @@ dcxAPI.prototype._parseXMLTpl = function(templ, callback) {
 		});
 	});
 }
+/*
+	вычислет  URL  к документу в DCX
+*/
+
 dcxAPI.prototype._docUrl = function(res) {
 	return res.caseless.dict.location
 }
-
+/*
+	вычислет ID объекта  в DCX из пути его URL
+*/
 dcxAPI.prototype._docId = function(res) {
 	var loc=this._docUrl(res);
 	return loc.split("/").pop();
 }
+/*
+	Посылает в DCX файл по его пути. Т.к. загрузка и обработка на той стороне асинхронная, 
+	ломится туда за статусом периодически несколько раз, пока не получит статус завершения
+*/
 
 dcxAPI.prototype._sendFile = function (path, callback) {
 	if (!fs.existsSync(path)) {
@@ -182,7 +210,9 @@ dcxAPI.prototype._sendFile = function (path, callback) {
 		}, 3000);
 	});
 }
-
+/*
+	обновляет статус документа в DCX по его идентификатору
+*/
 dcxAPI.prototype._updateStatus = function(id, status, callback) {
 	var that= this;
 	that.getDocument(id, function(err, obj) {
@@ -222,6 +252,9 @@ dcxAPI.prototype._updateStatus = function(id, status, callback) {
 		attached_to_story
 		story_documents
 	*/
+/*
+	Обновляет данные об использщовании документа 
+*/
 dcxAPI.prototype._updatePubInfo = function(id, type, callback) {
 	var that=this;
 	that._parseXMLTpl('updatePubInfo.xml', function(err, obj) {
@@ -241,6 +274,9 @@ dcxAPI.prototype._updatePubInfo = function(id, type, callback) {
 	});
 }
 
+/*
+	Создает новый документ в DCX
+*/
 dcxAPI.prototype._createDocument = function(meta, callback) {
 	var that=this;
 	that._parseXMLTpl('createDocument.xml', function(err, obj) {
@@ -280,6 +316,9 @@ dcxAPI.prototype._createDocument = function(meta, callback) {
 		});
 	});
 }
+/*
+	Модифицирует существующий документ по id
+*/
 dcxAPI.prototype._updateDocument = function (id, obj, callback) {
 	this._api({'url':'/document/' + id, 'method': 'PUT','body': obj }, function(err, res, body) {
 			if (err) return callback(err, null);	
@@ -342,7 +381,9 @@ dcxAPI.prototype._setMeta = function(meta, obj, callback) {
 // ==================================================================
 //							exports
 // ==================================================================
-
+/*
+	Авторизация на стороне DCX должна вызываться перед каждом запросе
+*/
 dcxAPI.prototype.auth = function(data, callback) {
 	if (!callback  && _.isFunction(data)) {
 		callback=data;
@@ -399,21 +440,33 @@ dcxAPI.prototype.auth = function(data, callback) {
 		callback(null, that.authData);
 	});
 }
+/*
+	возвращает флаг удаления для УЖЕ ПОЛУЧЕННОГО документа
+*/
 dcxAPI.prototype.isDeleted = function (obj, index) {
 	index = index || "0";
 	var isDeleted=objPath.get(obj, 'entry.document.'+index+'.pool_id.0.$.id') // pool_id: [ { '$': { id: 'trashcan' } } ]
 	_log(LOG_INFO,"Document deleted=", isDeleted=='trashcan');
 	return isDeleted =='trashcan';
 }
+/*
+	выковыривает Id документа  из тела полученного документа
+*/
 dcxAPI.prototype.getDocumentId = function(obj, index) {
 	index = index || "0";
 	return objPath.get(obj, 'entry.document.'+index+'.$.id');
 }
+/*
+	выковыривает время модификации из тела полученного документа
+*/
 dcxAPI.prototype.getDocumentModified = function(obj, index) {
 	index = index || "0";
 	return objPath.get(obj, 'entry.document.'+index+'.modified.0');
 }
 
+/*
+	Читает  документ из коллекции DCX по его идентифкатору
+*/
 dcxAPI.prototype.getDocument = function (id, callback) {
 	if (!id) return callback({stats:400, message:"Not correct docId"});
 	var that=this;
@@ -442,7 +495,9 @@ dcxAPI.prototype.getDocument = function (id, callback) {
 	});
 }
 
-
+/*
+	Записывает  документ в DCX (пытается модифицировать, если неудачно - то создает)
+*/
 
 dcxAPI.prototype.putDocument = function (id, meta, callback) {
 	var that = this;
@@ -470,7 +525,9 @@ dcxAPI.prototype.putDocument = function (id, meta, callback) {
 		};
 	});
 }
-
+/*
+	Записывает (создает) документ с бинарными данными в DCX 
+*/
 dcxAPI.prototype.putImage = function(path, meta, callback) {
 	_log(LOG_INFO,"VMALIB:uploadFile: ", path);
 	var that=this;
@@ -508,7 +565,11 @@ dcxAPI.prototype.putImage = function(path, meta, callback) {
 	});
 }
 
-
+/*
+	"привязывает" документ (как правило с бинарными данными) к документу типа Story (как правило статья с буквами)
+		slot - это поле вида основное/дополнительные файлы, см. доку к DCX
+		position - порядок документа в массиве подлинкованных бинарей
+*/
 
 dcxAPI.prototype.linkToStory = function(doc_id, story_id, slot, position, callback) {
 	var that=this;
